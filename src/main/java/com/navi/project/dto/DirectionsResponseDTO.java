@@ -1,12 +1,14 @@
 package com.navi.project.dto;
 
 import java.util.List;
+import java.util.Set;
 
 public class DirectionsResponseDTO {
     private Double distance;
     private Double duration;
-    private List<String> instructions;
     private String allTollFees;
+    private Set<String> tollBridgeList;
+    private List<String> instructions;    
     private List<List<Double>> geoCoord;
     
     
@@ -23,13 +25,6 @@ public class DirectionsResponseDTO {
 	public void setDuration(Double duration) {
 		this.duration = duration;
 	}
-	public List<List<Double>> getGeoCoord() {
-		return geoCoord;
-	}
-	public void setGeoCoord(List<List<Double>> geoCoord) {
-		this.geoCoord = geoCoord;
-	}
-
 	public List<String> getInstructions() {
 		return instructions;
 	}
@@ -42,7 +37,19 @@ public class DirectionsResponseDTO {
 	public void setAllTollFees(String allTollFees) {
 		this.allTollFees = allTollFees;
 	}
-	public DirectionsResponseDTO(Double distance, Double duration, String allTollFees, List<String> instructions,
+	public List<List<Double>> getGeoCoord() {
+		return geoCoord;
+	}
+	public void setGeoCoord(List<List<Double>> geoCoord) {
+		this.geoCoord = geoCoord;
+	}
+	public Set<String> getTollBridgeList() {
+		return tollBridgeList;
+	}
+	public void setTollBridgeList(Set<String> tollBridgeList) {
+		this.tollBridgeList = tollBridgeList;
+	}
+	public DirectionsResponseDTO(Double distance, Double duration, String allTollFees, Set<String> tollBridgeList, List<String> instructions,
 			List<List<Double>> geoCoord) {
 		super();
 		this.distance = distance;
@@ -50,12 +57,11 @@ public class DirectionsResponseDTO {
 		this.instructions = instructions;
 		this.allTollFees = allTollFees;
 		this.geoCoord = geoCoord;
+		this.tollBridgeList = tollBridgeList;
 	}
-
-
-
     
- 
 	
+    
+  
 	
 }
