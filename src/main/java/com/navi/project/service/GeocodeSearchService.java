@@ -29,9 +29,8 @@ public class GeocodeSearchService {
     public GeocodeSearchService(WebClient.Builder webClientBuilder, @Value("${ors.geocodesearch.uri}") String geocodeSearchUri) {
         this.webClient = webClientBuilder.baseUrl(geocodeSearchUri).build();
     }
-
-
-
+    
+    //verilen texte göre coordinat list döner
 	public Mono<List<GeocodeResultDTO>> searchAddress(String text) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder                        
