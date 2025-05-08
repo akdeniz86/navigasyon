@@ -1,13 +1,13 @@
 package com.navi.project.controller;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.*;
 
 import com.navi.project.dto.GeocodeResultDTO;
 import com.navi.project.service.GeocodeSearchService;
 
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/geocode")
@@ -21,7 +21,8 @@ public class GeocodeSearchController {
     }
 
 	@GetMapping("/search")
-    public Mono<List<GeocodeResultDTO>> search(@RequestParam String text) {
+	
+    public Mono<List<GeocodeResultDTO>>  search(@RequestParam String text) {
         return geocodeSearchService.searchAddress(text);
     }
 }
