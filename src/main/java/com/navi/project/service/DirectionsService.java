@@ -156,20 +156,23 @@ public class DirectionsService {
 					}
 				}
 
-				if (totalDistanceKiloMeters > 0 && highwayCode != null && tollPrices.containsKey(highwayCode)
-						&& !processedHighways.contains(highwayCode)) {
-
-					double fee = tollPrices.get(highwayCode) * totalDistanceKiloMeters;
-					result.append(String.format("%s Otoyolunda %.0f km yol için ücret %.2f₺, ", highwayCode,
-							totalDistanceKiloMeters, fee));
-					processedHighways.add(highwayCode);
-				}
+	            if (totalDistanceKiloMeters > 0 && highwayCode != null) {
+	                if (tollPrices.containsKey(highwayCode)) {
+	                    double fee = tollPrices.get(highwayCode) * totalDistanceKiloMeters;
+	                    result.append(String.format("%s Otoyolunda %.0f km yol için ücret %.2f₺, ", highwayCode,
+	                            totalDistanceKiloMeters, fee));
+	                    processedHighways.add(highwayCode);
+	                } else {
+	                    // Uyarı mesajı: Veritabanında ilgili otoyol kodu bulunamadı
+	                    result.append(String.format("Uyarı: %s otoyolu veritabanında bulunamadı. ", highwayCode));
+	                }
+	            }
 			}
 		}
 
 		if (result.length() > 0) {
 			result.setLength(result.length() - 2); // Sondaki ", " kaldır
-			result.append(" dir.");
+			result.append(".");
 		}
 
 		return result.toString();
