@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.navi.project.dto.GeocodeResultDTO;
+import com.navi.project.dto.GeocodeSearchResponseDTOs.GeocodeSearchResponseDTO;
 import com.navi.project.service.GeocodeSearchService;
 
 import reactor.core.publisher.Mono;
@@ -20,9 +20,8 @@ public class GeocodeSearchController {
 		this.geocodeSearchService = geocodeSearchService;
     }
 
-	@GetMapping("/search")
-	
-    public Mono<List<GeocodeResultDTO>>  search(@RequestParam String text) {
+	@GetMapping("/search")	
+    public Mono<List<GeocodeSearchResponseDTO>>  search(@RequestParam String text) {
         return geocodeSearchService.searchAddress(text);
     }
 }

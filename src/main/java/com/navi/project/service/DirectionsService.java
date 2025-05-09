@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,15 +12,18 @@ import java.util.stream.Collectors;
 
 import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-
 import com.navi.project.config.GeometryDecoder;
-import com.navi.project.dto.DirectionsRequestDTO;
-import com.navi.project.dto.DirectionsResponseDTO;
-import com.navi.project.model.TollBridges;
+import com.navi.project.dto.DirectionsResponseDTOs.DirectionsResponseDTO;
+import com.navi.project.dto.ORSDirectionsRequestDTOs.ORSDirectionsRequestDTO;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.Extras;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.ORSDirectionsResponseDTO;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.Route;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.Segment;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.Step;
+import com.navi.project.dto.ORSDirectionsResponseDTOs.Tollways;
 import com.navi.project.model.TollWays;
 import com.navi.project.repo.TollBridgesRepository;
 import com.navi.project.repo.TollWaysRepository;
@@ -48,26 +50,32 @@ public class DirectionsService {
     	}
 	
 
-	public Mono<DirectionsResponseDTO> calculateRoute(DirectionsRequestDTO requestDTO) {
-		return webClient.post().uri(directionsUri).header("Authorization", apiKey).bodyValue(requestDTO).retrieve()
-				.bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {
-				}).map(responseMap -> {
-					List<Map<String, Object>> routes = (List<Map<String, Object>>) responseMap.get("routes");
+	public Mono<DirectionsResponseDTO> calculateRoute(ORSDirectionsRequestDTO oRSDirectionsRequestDTO) {
+		return webClient.post()
+				.uri(directionsUri)
+				.header("Authorization", apiKey)
+				.bodyValue(oRSDirectionsRequestDTO).retrieve()
+				.bodyToMono(ORSDirectionsResponseDTO.class)
+				.map(responseMap -> {
+					List<Route> routes = responseMap.getRoutes();
+					
 					if (routes == null || routes.isEmpty()) {
 						throw new RuntimeException("Rota bulunamadı.");
-					}
+					}			
+					
+					Route route = responseMap.getRoutes().get(0);
+					List<Segment> segments = route.getSegments();
+					List<Step> steps = segments.get(0).getSteps();
+				//	Extras extras = route.getExtras();		
+					
 
-					Map<String, Object> route = routes.get(0);
-					List<Map<String, Object>> segments = (List<Map<String, Object>>) route.get("segments");
-					List<Map<String, Object>> steps = (List<Map<String, Object>>) segments.get(0).get("steps");
-					Map<String, Object> extras = (Map<String, Object>) route.get("extras");
 
 					// yol tarifi  Talimatlarını liste yapıyoruz////////////////////					
 					List<String> instructions = steps.stream()
 						    .map(step -> {
-						        String instruction = (String) Optional.ofNullable(step.get("instruction")).orElse("");
-						        Double distance = (Double) Optional.ofNullable(step.get("distance")).orElse("");
-						        Double duration = (Double) Optional.ofNullable(step.get("duration")).orElse("");						      					        
+						        String instruction = step.getInstruction();
+						        Double distance = step.getDistance();
+						        Double duration = step.getDuration();
 						        return  instruction + " ( "+ distance + " km, " + duration +" sn )";
 						    })
 						    .collect(Collectors.toList());
@@ -75,11 +83,12 @@ public class DirectionsService {
 
 
 					// Mesafe ve süre
-					double distance = ((Number) segments.get(0).get("distance")).doubleValue();
-					double duration = ((Number) segments.get(0).get("duration")).doubleValue();
+					double distance = segments.get(0).getDistance();
+					double duration = segments.get(0).getDuration();
+
 
 					// Geometriyi string ifadeyi koordinat sistemine çevir
-					String encodedGeometry = (String) route.get("geometry");
+					String encodedGeometry = route.getGeometry();
 					JSONArray coordinates = GeometryDecoder.decodeGeometry(encodedGeometry, false);
 					List<List<Double>> geoCoord = new ArrayList<>();
 					for (int i = 0; i < coordinates.length(); i++) {
@@ -113,34 +122,33 @@ public class DirectionsService {
 
 	/////////////// O- ile başlayan otoyol uzunluklarını tek tek topla ve
 	/////////////// veritabanındaki fiyatı ile çarp hesapla////////////////////////
-	public String calculateTollFees(Map<String, Object> route, Map<String, Double> tollPrices) {
-		List<Map<String, Object>> segments = (List<Map<String, Object>>) route.get("segments");
-		List<Map<String, Object>> steps = (List<Map<String, Object>>) segments.get(0).get("steps");
-
-		Map<String, Object> extras = (Map<String, Object>) route.get("extras");
-		Map<String, Object> tollways = (Map<String, Object>) extras.get("tollways");
-		List<List<Object>> tollValues = (List<List<Object>>) tollways.get("values");
-
+	public String calculateTollFees(Route route, Map<String, Double> tollPrices) {
+		List<Segment> segments = route.getSegments();
+		List<Step> steps = segments.get(0).getSteps();
+		Extras extras = route.getExtras();	
+		Tollways tollways =extras.getTollways();
+		List<List<Integer>> tollValues = tollways.getValues();
+		
 		StringBuilder result = new StringBuilder();
 		Set<String> processedHighways = new HashSet<>();
 
-		for (List<Object> toll : tollValues) {
-			int tollStart = (int) toll.get(0);
-			int tollEnd = (int) toll.get(1);
-			int isToll = (int) toll.get(2);
+		for (List<Integer> toll : tollValues) {
+			Integer tollStart = (Integer) toll.get(0);
+			Integer tollEnd = (Integer) toll.get(1);
+			Integer isToll = (Integer) toll.get(2);
 
 			if (isToll == 1) {
 				double totalDistanceKiloMeters = 0.0;
 				String highwayCode = null; // O- kodunu bulana kadar sakla
 
-				for (Map<String, Object> step : steps) {
-					List<Integer> wayPoints = (List<Integer>) step.get("way_points");
-					int stepStart = wayPoints.get(0);
-					int stepEnd = wayPoints.get(1);
+				for (Step step : steps) {
+					List<Integer> wayPoints = step.getWay_points();
+					Integer stepStart = wayPoints.get(0);
+					Integer stepEnd = wayPoints.get(1);
 
 					if (isInRange(stepStart, stepEnd, tollStart, tollEnd)) {
-						totalDistanceKiloMeters += ((Number) step.get("distance")).doubleValue();
-						String stepName = (String) step.get("name");
+						totalDistanceKiloMeters += step.getDistance();
+						String stepName = step.getName();
 						// O- kodunu bulmaya çalış
 						if (highwayCode == null) {
 							highwayCode = findHighwayCode(stepName);
@@ -166,12 +174,12 @@ public class DirectionsService {
 
 		return result.toString();
 	}
-
-	private boolean isInRange(int stepStart, int stepEnd, int rangeStart, int rangeEnd) {
+	////////////**************************///////////////////////
+	private boolean isInRange(Integer stepStart, Integer stepEnd, Integer rangeStart, Integer rangeEnd) {
 		// koordinat Adımının, ücretli bölümle çakışıp çakışmadığını kontrol et
 		return Math.max(stepStart, rangeStart) <= Math.min(stepEnd, rangeEnd);
 	}
-
+	////////////**************************///////////////////////
 	private String findHighwayCode(String name) {
 		// "O-" ile başlayan otoyol kodunu bul
 		if (name == null)
@@ -181,35 +189,4 @@ public class DirectionsService {
 		return matcher.find() ? matcher.group() : null;
 	}
 	
-//	/// köprü metotu
-//	 public List<String> findNearbyBridgeDescriptions(List<List<Double>> geoCoord, double distanceBridge) {
-//	        // LINESTRING WKT oluştur
-//	        StringBuilder sb = new StringBuilder("LINESTRING(");
-//	        for (int i = 0; i < geoCoord.size(); i++) {
-//	            List<Double> point = geoCoord.get(i);
-//	            sb.append(point.get(0)).append(" ").append(point.get(1));
-//	            if (i < geoCoord.size() - 1) sb.append(", ");
-//	        }
-//	        sb.append(")");
-//	        String lineStringWKT = sb.toString();
-//
-//	        // Veritabanı sorgusu
-//	       // List<Object[]> results = tollBridgesRepository.findNearbyBridgesFromLine(lineStringWKT, distanceBridge);
-//
-//	        // String ifadeye dönüştür
-//	        //List<String> descriptions = new ArrayList<>();
-//	        Set<String> descriptions = new HashSet<>();
-//	        for (List<Double> coord : geoCoord) {
-//	            String wkt = String.format("POINT(%f %f)", coord.get(0), coord.get(1));
-//	            List<Object[]> results = tollBridgesRepository.findNearbyBridges(wkt, 100.0);
-//	            for (Object[] row : results) {
-//	                String name = (String) row[0];
-//	                Double price = (Double) row[1];
-//	                descriptions.add(name + " ücreti: " + price + "₺");
-//	            }
-//	        }
-//
-//	        return descriptions;
-//	    }
-
 }

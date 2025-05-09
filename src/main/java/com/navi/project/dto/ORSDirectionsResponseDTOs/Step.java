@@ -1,6 +1,5 @@
 package com.navi.project.dto.ORSDirectionsResponseDTOs;
 
-import com.fasterxml.jackson.annotation.*;
 import java.util.List;
 
 public class Step {
@@ -9,41 +8,52 @@ public class Step {
     private long type;
     private String instruction;
     private String name;
-    private List<Long> wayPoints;
+    private List<Integer> way_points;
     private Long exitNumber;
+	public double getDistance() {
+		return distance;
+	}
+	public void setDistance(double distance) {
+		this.distance = distance;
+	}
+	public double getDuration() {
+		return duration;
+	}
+	public void setDuration(double duration) {
+		this.duration = duration;
+	}
+	public long getType() {
+		return type;
+	}
+	public void setType(long type) {
+		this.type = type;
+	}
+	public String getInstruction() {
+		return instruction;
+	}
+	public void setInstruction(String instruction) {
+		this.instruction = instruction;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public List<Integer> getWay_points() {
+		return way_points;
+	}
+	public void setWay_points(List<Integer> way_points) {
+		this.way_points = way_points;
+	}
+	public Long getExitNumber() {
+		return exitNumber;
+	}
+	public void setExitNumber(Long exitNumber) {
+		this.exitNumber = exitNumber;
+	}
+    
+    
 
-    @JsonProperty("distance")
-    public double getDistance() { return distance; }
-    @JsonProperty("distance")
-    public void setDistance(double value) { this.distance = value; }
 
-    @JsonProperty("duration")
-    public double getDuration() { return duration; }
-    @JsonProperty("duration")
-    public void setDuration(double value) { this.duration = value; }
-
-    @JsonProperty("type")
-    public long getType() { return type; }
-    @JsonProperty("type")
-    public void setType(long value) { this.type = value; }
-
-    @JsonProperty("instruction")
-    public String getInstruction() { return instruction; }
-    @JsonProperty("instruction")
-    public void setInstruction(String value) { this.instruction = value; }
-
-    @JsonProperty("name")
-    public String getName() { return name; }
-    @JsonProperty("name")
-    public void setName(String value) { this.name = value; }
-
-    @JsonProperty("way_points")
-    public List<Long> getWayPoints() { return wayPoints; }
-    @JsonProperty("way_points")
-    public void setWayPoints(List<Long> value) { this.wayPoints = value; }
-
-    @JsonProperty("exit_number")
-    public Long getExitNumber() { return exitNumber; }
-    @JsonProperty("exit_number")
-    public void setExitNumber(Long value) { this.exitNumber = value; }
 }

@@ -2,8 +2,8 @@ package com.navi.project.controller;
 
 import org.springframework.web.bind.annotation.*;
 
-import com.navi.project.dto.DirectionsRequestDTO;
-import com.navi.project.dto.DirectionsResponseDTO;
+import com.navi.project.dto.DirectionsResponseDTOs.DirectionsResponseDTO;
+import com.navi.project.dto.ORSDirectionsRequestDTOs.ORSDirectionsRequestDTO;
 import com.navi.project.service.DirectionsService;
 
 import reactor.core.publisher.Mono;
@@ -20,7 +20,7 @@ public class DirectionsController {
     }
 
     @PostMapping("/calculate")
-    public Mono<DirectionsResponseDTO> calculateRoute(@RequestBody DirectionsRequestDTO requestDTO) {
-        return directionsService.calculateRoute(requestDTO);
+    public Mono<DirectionsResponseDTO> calculateRoute(@RequestBody ORSDirectionsRequestDTO oRSDirectionsRequestDTO) {
+        return directionsService.calculateRoute(oRSDirectionsRequestDTO);
     }
 }

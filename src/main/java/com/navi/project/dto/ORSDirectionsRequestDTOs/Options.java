@@ -1,13 +1,18 @@
 package com.navi.project.dto.ORSDirectionsRequestDTOs;
 
-import com.fasterxml.jackson.annotation.*;
 import java.util.List;
 
 public class Options {
-    private List<Object> avoidFeatures;
+	private List<String> avoid_features;
 
-    @JsonProperty("avoid_features")
-    public List<Object> getAvoidFeatures() { return avoidFeatures; }
-    @JsonProperty("avoid_features")
-    public void setAvoidFeatures(List<Object> value) { this.avoidFeatures = value; }
+	public List<String> getAvoid_features() {
+		return avoid_features;
+	}
+
+	public void setAvoid_features(List<String> avoid_features) {
+		this.avoid_features = avoid_features;
+	}
+
+
+	
 }
