@@ -1,6 +1,7 @@
 package com.navi.project.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -82,7 +83,7 @@ public class DirectionsService {
 					
 
 
-					// Mesafe ve süre
+					// Mesafe ve süre //////////////////////////
 					double distance = segments.get(0).getDistance();
 					double duration = segments.get(0).getDuration();
 
@@ -123,73 +124,75 @@ public class DirectionsService {
 	/////////////// O- ile başlayan otoyol uzunluklarını tek tek topla ve
 	/////////////// veritabanındaki fiyatı ile çarp hesapla////////////////////////
 	public String calculateTollFees(Route route, Map<String, Double> tollPrices) {
-		List<Segment> segments = route.getSegments();
-		List<Step> steps = segments.get(0).getSteps();
-		Extras extras = route.getExtras();	
-		Tollways tollways =extras.getTollways();
-		List<List<Integer>> tollValues = tollways.getValues();
-		
-		StringBuilder result = new StringBuilder();
-		Set<String> processedHighways = new HashSet<>();
+	    List<Segment> segments = route.getSegments();
+	    List<Step> steps = segments.get(0).getSteps();
+	    Extras extras = route.getExtras();
+	    Tollways tollways = extras.getTollways();
+	    List<List<Integer>> tollValues = tollways.getValues();
 
-		for (List<Integer> toll : tollValues) {
-			Integer tollStart = (Integer) toll.get(0);
-			Integer tollEnd = (Integer) toll.get(1);
-			Integer isToll = (Integer) toll.get(2);
+	    // Her otoyol için toplam mesafeyi tutan harita
+	    Map<String, Double> highwayDistances = new HashMap<>();
 
-			if (isToll == 1) {
-				double totalDistanceKiloMeters = 0.0;
-				String highwayCode = null; // O- kodunu bulana kadar sakla
+	    for (List<Integer> toll : tollValues) {
+	        Integer tollStart = toll.get(0);
+	        Integer tollEnd = toll.get(1);
+	        Integer isToll = toll.get(2);
 
-				for (Step step : steps) {
-					List<Integer> wayPoints = step.getWay_points();
-					Integer stepStart = wayPoints.get(0);
-					Integer stepEnd = wayPoints.get(1);
+	        if (isToll == 1) {
+	            for (Step step : steps) {
+	                List<Integer> wayPoints = step.getWay_points();
+	                Integer stepStart = wayPoints.get(0);
+	                Integer stepEnd = wayPoints.get(1);
 
-					if (isInRange(stepStart, stepEnd, tollStart, tollEnd)) {
-						totalDistanceKiloMeters += step.getDistance();
-						String stepName = step.getName();
-						// O- kodunu bulmaya çalış
-						if (highwayCode == null) {
-							highwayCode = findHighwayCode(stepName);
-						}
-					}
-				}
+	                if (isInRange(stepStart, stepEnd, tollStart, tollEnd)) {
+	                    String stepName = step.getName();
+	                    String highwayCode = findHighwayCode(stepName);
 
-	            if (totalDistanceKiloMeters > 0 && highwayCode != null) {
-	                if (tollPrices.containsKey(highwayCode)) {
-	                    double fee = tollPrices.get(highwayCode) * totalDistanceKiloMeters;
-	                    result.append(String.format("%s Otoyolunda %.0f km yol için ücret %.2f₺, ", highwayCode,
-	                            totalDistanceKiloMeters, fee));
-	                    processedHighways.add(highwayCode);
-	                } else {
-	                    // Uyarı mesajı: Veritabanında ilgili otoyol kodu bulunamadı
-	                    result.append(String.format("Uyarı: %s otoyolu veritabanında bulunamadı. ", highwayCode));
+	                    if (highwayCode != null) {
+	                        highwayDistances.put(highwayCode,
+	                                highwayDistances.getOrDefault(highwayCode, 0.0) + step.getDistance());
+	                    }
 	                }
 	            }
-			}
-		}
+	        }
+	    }
 
-		if (result.length() > 0) {
-			result.setLength(result.length() - 2); // Sondaki ", " kaldır
-			result.append(".");
-		}
+	    // Sonuç metni oluştur
+	    StringBuilder result = new StringBuilder();
+	    for (Map.Entry<String, Double> entry : highwayDistances.entrySet()) {
+	        String highwayCode = entry.getKey();
+	        double distance = entry.getValue();
 
-		return result.toString();
+	        if (tollPrices.containsKey(highwayCode)) {
+	            double fee = tollPrices.get(highwayCode) * distance;
+	            result.append(String.format("%s Otoyolunda %.0f km yol için ücret %.2f₺, ",
+	                    highwayCode, distance, fee));
+	        } else {
+	            result.append(String.format("Uyarı: %s otoyolu veritabanında bulunamadı. ", highwayCode));
+	        }
+	    }
+
+	    if (result.length() > 0) {
+	        result.setLength(result.length() - 2); // sondaki ", " kaldır
+	        result.append(".");
+	    }
+
+	    return result.toString();
 	}
+
+
 	////////////**************************///////////////////////
+	///// koordinat Adımının, ücretli bölümle çakışıp çakışmadığını kontrol et
 	private boolean isInRange(Integer stepStart, Integer stepEnd, Integer rangeStart, Integer rangeEnd) {
-		// koordinat Adımının, ücretli bölümle çakışıp çakışmadığını kontrol et
-		return Math.max(stepStart, rangeStart) <= Math.min(stepEnd, rangeEnd);
+	    return Math.max(stepStart, rangeStart) <= Math.min(stepEnd, rangeEnd);
 	}
-	////////////**************************///////////////////////
+	////////////**************************//////////////////////
+	////// "O-" ile başlayan otoyol kodunu bul
 	private String findHighwayCode(String name) {
-		// "O-" ile başlayan otoyol kodunu bul
-		if (name == null)
-			return null; // Null kontrolü
-		Pattern pattern = Pattern.compile("O-\\d+"); // Doğru regex
-		Matcher matcher = pattern.matcher(name);
-		return matcher.find() ? matcher.group() : null;
+	    if (name == null) return null;
+	    Pattern pattern = Pattern.compile("O-\\d+");
+	    Matcher matcher = pattern.matcher(name);
+	    return matcher.find() ? matcher.group() : null;
 	}
 	
 }
