@@ -111,7 +111,7 @@ public class DirectionsService {
 					    for (Object[] row : results) {
 					        String name = (String) row[0];
 					        Double price = (Double) row[1];
-					        tollBridgeList.add("Ve " + name + " ücreti: " + price + "₺");
+					        tollBridgeList.add(name + " ücreti: " + price + "₺");
 					    }
 					}
 					
