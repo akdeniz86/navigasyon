@@ -3,24 +3,20 @@ package com.navi.project.dto.ORSDirectionsResponseDTOs;
 import java.util.List;
 
 public class ORSDirectionsResponseDTO {
+    private String type;
     private List<Double> bbox;
-    private List<Route> routes;
+    private List<Feature> features;
     private Metadata metadata;
+
+    public String getType() { return type; }
+    public void setType(String value) { this.type = value; }
 
     public List<Double> getBbox() { return bbox; }
     public void setBbox(List<Double> value) { this.bbox = value; }
 
-    public List<Route> getRoutes() { return routes; }
-    public void setRoutes(List<Route> value) { this.routes = value; }
+    public List<Feature> getFeatures() { return features; }
+    public void setFeatures(List<Feature> value) { this.features = value; }
 
     public Metadata getMetadata() { return metadata; }
     public void setMetadata(Metadata value) { this.metadata = value; }
-	public ORSDirectionsResponseDTO(List<Double> bbox, List<Route> routes, Metadata metadata) {
-		super();
-		this.bbox = bbox;
-		this.routes = routes;
-		this.metadata = metadata;
-	}
-    
-    
 }

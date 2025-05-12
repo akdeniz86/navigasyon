@@ -8,17 +8,17 @@ import jakarta.persistence.Id;
 
 @Entity
 public class TollWays {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "highway_code", unique = true)
-    private String highwayCode;
+	@Column(name = "highway_code", unique = true)
+	private String highwayCode;
 
-    @Column(name = "price")
-    private Double price;
-    
- // getters and setters
+	@Column(name = "price")
+	private Double price;
+
+	// getters and setters
 
 	public Long getId() {
 		return id;
@@ -60,11 +60,5 @@ public class TollWays {
 	public String toString() {
 		return "TollPrice [id=" + id + ", highwayCode=" + highwayCode + ", price=" + price + "]";
 	}
-	
-	
-	
 
-    
-    
-    
 }

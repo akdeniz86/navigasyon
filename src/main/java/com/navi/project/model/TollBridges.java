@@ -1,7 +1,6 @@
 package com.navi.project.model;
 
 import java.awt.Point;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,18 +10,18 @@ import jakarta.persistence.Id;
 @Entity
 public class TollBridges {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    private String name;
+	private String name;
 
-    @Column(columnDefinition = "POINT")
-    private Point location;
+	@Column(columnDefinition = "POINT")
+	private Point location;
 
-    private Double price;
+	private Double price;
 
-    // getter/setter
+	// getter/setter
 	public TollBridges(Long id, String name, Point location, Double price) {
 		super();
 		this.id = id;
@@ -63,7 +62,4 @@ public class TollBridges {
 		this.price = price;
 	}
 
-   
-    
-    
 }

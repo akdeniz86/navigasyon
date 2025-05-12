@@ -13,6 +13,4 @@ public class Options {
 		this.avoid_features = avoid_features;
 	}
 
-
-	
 }

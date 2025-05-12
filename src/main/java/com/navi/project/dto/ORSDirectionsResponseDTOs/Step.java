@@ -3,23 +3,23 @@ package com.navi.project.dto.ORSDirectionsResponseDTOs;
 import java.util.List;
 
 public class Step {
-    private double distance;
-    private double duration;
+    private Double distance;
+    private Double duration;
     private long type;
     private String instruction;
     private String name;
     private List<Integer> way_points;
     private Long exitNumber;
-	public double getDistance() {
+	public Double getDistance() {
 		return distance;
 	}
-	public void setDistance(double distance) {
+	public void setDistance(Double distance) {
 		this.distance = distance;
 	}
-	public double getDuration() {
+	public Double getDuration() {
 		return duration;
 	}
-	public void setDuration(double duration) {
+	public void setDuration(Double duration) {
 		this.duration = duration;
 	}
 	public long getType() {
@@ -54,6 +54,8 @@ public class Step {
 	}
     
     
+    
 
+  
 
 }
