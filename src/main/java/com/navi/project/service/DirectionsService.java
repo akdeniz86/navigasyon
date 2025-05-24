@@ -1,6 +1,6 @@
 package com.navi.project.service;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.navi.project.dto.TollWayDto;
 import com.navi.project.dto.DirectionsResponseDTOs.DirectionsResponseDTO;
 import com.navi.project.dto.ORSDirectionsRequestDTOs.ORSDirectionsRequestDTO;
 import com.navi.project.dto.ORSDirectionsResponseDTOs.Feature;
@@ -18,9 +19,8 @@ import com.navi.project.dto.ORSDirectionsResponseDTOs.ORSDirectionsResponseDTO;
 
 import com.navi.project.dto.ORSDirectionsResponseDTOs.Segment;
 import com.navi.project.dto.ORSDirectionsResponseDTOs.Step;
-
-import com.navi.project.repo.RoadsRepository;
 import com.navi.project.repo.TollBridgesRepository;
+import com.navi.project.repo.TollWayRepository;
 
 import reactor.core.publisher.Mono;
 
@@ -30,22 +30,23 @@ public class DirectionsService {
 	private final WebClient webClient;
 
 	private final TollBridgesRepository tollBridgesRepository;
-    private final RoadsRepository roadsRepository;
-    
+	private final TollWayRepository tollWayRepository;
+
 	@Value("${ors.api.key}")
 	private String apiKey;
 
 	@Value("${ors.directions.uri}")
 	private String directionsUri;
 
-	public DirectionsService(WebClient.Builder webClientBuilder,RoadsRepository roadsRepository,
-			TollBridgesRepository tollBridgesRepository) {
-		this.webClient = webClientBuilder.build();
-
+	public DirectionsService(WebClient.Builder webClientBuilder, TollBridgesRepository tollBridgesRepository,
+			TollWayRepository tollWayRepository) {
+		this.webClient = webClientBuilder
+				.codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(512 * 1024)) // 512KB tampon boyutu artırıldı
+				.build();
 		this.tollBridgesRepository = tollBridgesRepository;
-		this.roadsRepository = roadsRepository;
+		this.tollWayRepository = tollWayRepository;
 	}
-
+	
 	public Mono<DirectionsResponseDTO> calculateRoute(ORSDirectionsRequestDTO oRSDirectionsRequestDTO) {
 		return webClient.post().uri(directionsUri).header("Authorization", apiKey).bodyValue(oRSDirectionsRequestDTO)
 				.retrieve().bodyToMono(ORSDirectionsResponseDTO.class).map(responseMap -> {
@@ -58,69 +59,86 @@ public class DirectionsService {
 					Feature feature = responseMap.getFeatures().get(0);
 					List<Segment> segments = feature.getProperties().getSegments();
 					List<Step> steps = segments.get(0).getSteps();
-					
-					// Mesafe ve süre //////////////////////////
+
+					// yol tarifi Talimatlarını listeleme
+					List<String> instructions = steps.stream().map(step -> {
+						String instruction = step.getInstruction();
+						Double distance = step.getDistance();
+						Double duration = step.getDuration();
+						return instruction + " ( " + distance + " km, " + duration + " sn )" + step.getName();
+					}).collect(Collectors.toList());
+
+					// Mesafe ve süre hesaplama
 					double distance = segments.get(0).getDistance();
 					double duration = segments.get(0).getDuration();
-				
-					// yol tarifi Talimatlarını liste yapıyoruz////////////////////
-					List<List<Double>> instructions = steps.stream()
-						    .map(step -> Arrays.asList(step.getDistance(), step.getDuration()))
-						    .collect(Collectors.toList());
-					
-					List<List<Double>> geoCoords =feature.getGeometry().getCoordinates();		
-					
-					///////////////yeniyoll////////////////////////////////////////
-					// RoadsRepository üzerinden sorgu çek ve kesişim uzunluğunu al
-					Double intersectLength = calculateRoadIntersectionLength(geoCoords);
-					String allTollFees = (intersectLength != null) ? intersectLength.toString() : "0.0"; 
+
+					List<List<Double>> geoCoord = feature.getGeometry().getCoordinates();
 
 					// koordinat dizisinin köprüden geçiyormu sorgusu
-					Set<String> tollBridgeList = new HashSet<>();
+					// 1. Köprü ve GateA sorguları
+					Set<String> tollBridgeSet = new HashSet<>();
+					List<String> tollBridgeList = new ArrayList<>();
+					List<TollWayDto> gateAList = new ArrayList<>();
+					List<TollWayDto> gateBList = new ArrayList<>();
+					double totalBridgeFee = 0.0;
 
-					for (List<Double> geoCoord : geoCoords) {
-						String wkt = String.format(Locale.US, "POINT(%f %f)", geoCoord.get(0), geoCoord.get(1));
-						List<Object[]> results = tollBridgesRepository.findNearbyBridges(wkt, 1000.0);
-						for (Object[] row : results) {
-							String name = (String) row[0];
-							Double price = (Double) row[1];
-							tollBridgeList.add(name + " ücreti: " + price + "₺");
+
+					String lineStringWkt = "LINESTRING(" + geoCoord.stream()
+							.map(coord -> String.format(Locale.US, "%f %f", coord.get(0), coord.get(1)))
+							.collect(Collectors.joining(", ")) + ")";
+
+					List<Object[]> bridgeResults = tollBridgesRepository.findNearbyBridges(lineStringWkt, 50);
+
+					for (Object[] row : bridgeResults) {
+						String name = (String) row[0];
+						Double price = (Double) row[1];
+						String entry = "  " + name + " ücreti : " + price + "₺";
+
+						if (tollBridgeSet.add(entry)) {
+							tollBridgeList.add(entry);
+							totalBridgeFee += price;
 						}
 					}
 
-					// DTO oluştur RouteResponseDTO
-					return new DirectionsResponseDTO(distance, duration, allTollFees, tollBridgeList, instructions,
-							geoCoords);
+					gateAList = tollWayRepository.findByGateAPoint(lineStringWkt, 50);
+					gateBList = tollWayRepository.findByGateBPoint(lineStringWkt, 50);	
+				
+
+					// A ve B listelerini karşılaştır, aynı ID'ye sahip olanları yeni listeye ekle
+					Set<Long> gateBIds = gateBList.stream().map(TollWayDto::getId).collect(Collectors.toSet());
+					// id leri aynı olanlar liste yapılıyor
+					List<TollWayDto> matchedTollWays = gateAList.stream().filter(a -> gateBIds.contains(a.getId()))
+							.collect(Collectors.toList());
+
+					List<String> allTollFees = new ArrayList<>();
+					Double totalWaysFee = 0.0;
+					// otoyol cevp listesi hazırlanıyor
+					for (TollWayDto matchedTollWay : matchedTollWays) {
+						String highwayName = matchedTollWay.getHighwayName();
+						String highwayCode = matchedTollWay.getHighwayCode();
+						String gateAName = matchedTollWay.getGateAName();
+						String gateBName = matchedTollWay.getGateBName();
+						Double fee = matchedTollWay.getFee();
+						String entryPart = "  " + highwayName + " (" + highwayCode + ") (" + gateAName + "-" + gateBName
+								+ ") ücreti : " + fee + "₺";
+
+						// otoyol ücretlerinin tekrarlarını önlemek için
+						if (!allTollFees.contains(entryPart)) {
+							allTollFees.add(entryPart);
+							totalWaysFee += fee; // ücretleri topla
+						}
+
+					}
+
+					// otoyol ücretleri ve köprü ücreti toplamı
+					Double totalFee = totalBridgeFee + totalWaysFee;
+
+					System.out.println(totalFee);
+
+					// DTO oluştur RouteResponseDTO mesafe , süre, toplamücret, otoyolname körpüler
+					// adımlar koordinatlar
+					return new DirectionsResponseDTO(distance, duration, totalFee, allTollFees, tollBridgeList,
+							instructions, geoCoord);
 				});
 	}
-	
-    public Double calculateRoadIntersectionLength(List<List<Double>> geoCoords) {
-        // Koordinat listesini WKT'ye çevir
-        String wkt = convertToWKT(geoCoords);
-        
-        // RoadsRepository üzerinden sorgu çek ve kesişim uzunluğunu al
-        return roadsRepository.getApproxIntersectLengthMeters(wkt);
-    }
-
-	
-    private String convertToWKT(List<List<Double>> coordinates) {
-        if (coordinates == null || coordinates.isEmpty()) {
-            throw new IllegalArgumentException("Koordinat listesi boş olamaz");
-        }
-
-        StringBuilder sb = new StringBuilder("LINESTRING(");
-        for (int i = 0; i < coordinates.size(); i++) {
-            List<Double> point = coordinates.get(i);
-            if (point.size() != 2) {
-                throw new IllegalArgumentException("Her koordinat [lon, lat] formatında olmalıdır.");
-            }
-            sb.append(point.get(0)).append(" ").append(point.get(1));
-            if (i < coordinates.size() - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append(")");
-        return sb.toString();
-    }
-				
 }

@@ -1,14 +1,15 @@
 package com.navi.project.dto.DirectionsResponseDTOs;
 
 import java.util.List;
-import java.util.Set;
+
 
 public class DirectionsResponseDTO {
 	private Double distance;
 	private Double duration;
-	private String allTollFees;
-	private Set<String> tollBridgeList;
-	private List<List<Double>> instructions;
+	private Double totalFee;
+	List<String> allTollFees ;
+	private List<String> tollBridgeList;
+	private List<String>  instructions;
 	private List<List<Double>> geoCoords;
 	public Double getDistance() {
 		return distance;
@@ -22,22 +23,28 @@ public class DirectionsResponseDTO {
 	public void setDuration(Double duration) {
 		this.duration = duration;
 	}
-	public String getAllTollFees() {
+	public Double getTotalFee() {
+		return totalFee;
+	}
+	public void setTotalFee(Double totalFee) {
+		this.totalFee = totalFee;
+	}
+	public List<String> getAllTollFees() {
 		return allTollFees;
 	}
-	public void setAllTollFees(String allTollFees) {
+	public void setAllTollFees(List<String> allTollFees) {
 		this.allTollFees = allTollFees;
 	}
-	public Set<String> getTollBridgeList() {
+	public List<String> getTollBridgeList() {
 		return tollBridgeList;
 	}
-	public void setTollBridgeList(Set<String> tollBridgeList) {
+	public void setTollBridgeList(List<String> tollBridgeList) {
 		this.tollBridgeList = tollBridgeList;
 	}
-	public List<List<Double>> getInstructions() {
+	public List<String> getInstructions() {
 		return instructions;
 	}
-	public void setInstructions(List<List<Double>> instructions) {
+	public void setInstructions(List<String> instructions) {
 		this.instructions = instructions;
 	}
 	public List<List<Double>> getGeoCoords() {
@@ -46,16 +53,20 @@ public class DirectionsResponseDTO {
 	public void setGeoCoords(List<List<Double>> geoCoords) {
 		this.geoCoords = geoCoords;
 	}
-	public DirectionsResponseDTO(Double distance, Double duration, String allTollFees, Set<String> tollBridgeList,
-			List<List<Double>> instructions, List<List<Double>> geoCoords) {
+	public DirectionsResponseDTO(Double distance, Double duration, Double totalFee, List<String> allTollFees,
+			List<String> tollBridgeList, List<String> instructions, List<List<Double>> geoCoords) {
 		super();
 		this.distance = distance;
 		this.duration = duration;
+		this.totalFee = totalFee;
 		this.allTollFees = allTollFees;
 		this.tollBridgeList = tollBridgeList;
 		this.instructions = instructions;
 		this.geoCoords = geoCoords;
 	}
+	
+	
+	
 	
 	
 }

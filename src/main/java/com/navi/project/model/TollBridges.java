@@ -16,9 +16,9 @@ public class TollBridges {
 
 	private String name;
 
-	@Column(columnDefinition = "POINT")
+	 @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
 	private Point location;
-
+   
 	private Double price;
 
 	// getter/setter
